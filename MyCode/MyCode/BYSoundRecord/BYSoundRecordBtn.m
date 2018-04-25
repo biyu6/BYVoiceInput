@@ -9,7 +9,6 @@
 #import "BYSoundRecordBtn.h"
 #import <Speech/Speech.h>//语音识别的系统类
 
-
 //按钮的颜色和文字
 #define norColor [UIColor colorWithRed:0/255.0f green:162/255.0f blue:226/255.0f alpha:1.0]
 #define highColor [UIColor colorWithRed:175/255.0f green:175/255.0f blue:175/255.0f alpha:1.0]
@@ -26,6 +25,8 @@ static NSString *highText = @"松开开始搜索";
 @property (nonatomic, strong)SFSpeechRecognizer *speechRecognizer;
 /**语音识别的文字*/
 @property (nonatomic, copy)NSString *speechText;
+/**是否识别错误*/
+@property (nonatomic, assign)BOOL isSpeechError;
 
 @end
 @implementation BYSoundRecordBtn
@@ -88,7 +89,9 @@ static NSString *highText = @"松开开始搜索";
                 self.clickSoundRecordStopBtn(ws.speechText);
             }
         }else{
-            [MBProgressHUD showMessage:@"未能获取语音内容，请重试！" afterDelay:1.0 MBPMode:5 isWindiw:YES];
+            if (ws.isSpeechError) {//只有当识别错误的情况下才提示，有可能压根就没开始识别
+                [MBProgressHUD showMessage:@"未能获取语音内容，请重试！" afterDelay:1.0 MBPMode:5 isWindiw:YES];
+            }
         }
     });
 }
@@ -116,55 +119,53 @@ static NSString *highText = @"松开开始搜索";
     _speechRecognizer = [[SFSpeechRecognizer alloc] initWithLocale:usLocale];
     _speechRecognizer.delegate = self;
     //申请用户语音识别权限
-    [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {
-        if (status != SFSpeechRecognizerAuthorizationStatusAuthorized) {//如果用户没有授权语音识别（用户尚未进行选择、拒绝授权、设备不支持语音识别）
-            NSLog(@"【biyu6调试信息】警告：用户还没有授权语音识别");
-        }
-    }];
+    [self getVoiceAuthorization];
     _audioEngine = [[AVAudioEngine alloc] init];
 }
-- (void)speechBtnClick{//语音搜索授权
+- (void)getVoiceAuthorization{//获取授权
+    AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+    if (authStatus == AVAuthorizationStatusNotDetermined) {//没有询问是否开启麦克风
+        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+        if([audioSession respondsToSelector:@selector(requestRecordPermission:)]){//请求记录权限
+            [audioSession performSelector:@selector(requestRecordPermission:) withObject:^(BOOL granted) {
+                if (granted) {
+                    //获取当前用户语音识别权限
+                    SFSpeechRecognizerAuthorizationStatus speechState = [SFSpeechRecognizer authorizationStatus];
+                    if(speechState!=SFSpeechRecognizerAuthorizationStatusAuthorized){//如果用户没有授权语音识别（用户尚未进行选择、拒绝授权、设备不支持语音识别）
+                        [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {//请求授权
+                        }];
+                    }
+                }
+            }];
+        }
+    }
+}
+- (void)speechBtnClick{//语音搜索
     if (_audioEngine.isRunning) {//语音引擎 运行中
         [_recognitionRequest endAudio];
         [_audioEngine stop];
     }else{
-        if ([self checkMicrophoneStatus] == 3) {//已经授权
-            [self startRecording];
-        }else if ([self checkMicrophoneStatus] == 2){//未授权(单纯的未授权、家长控制未授权)
-            [MBProgressHUD showMessage:@"启动麦克风失败，请在设置中授予CNTraveler麦克风的权限" afterDelay:2.0 MBPMode:5 isWindiw:YES];
-        }else if ([self checkMicrophoneStatus] == 1){//没有询问是否开启麦克风
-            AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-            if ([audioSession respondsToSelector:@selector(requestRecordPermission:)]) {
-                [audioSession performSelector:@selector(requestRecordPermission:) withObject:^(BOOL granted) {
-                    if (granted) {
+        AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+        if (authStatus == AVAuthorizationStatusAuthorized) {//已经授权麦克风
+            //是否授权语音识别
+            SFSpeechRecognizerAuthorizationStatus speechState = [SFSpeechRecognizer authorizationStatus];
+            if(speechState==SFSpeechRecognizerAuthorizationStatusAuthorized){//已授权语音识别
+                [self startRecording];
+            }else if (speechState == SFSpeechRecognizerAuthorizationStatusNotDetermined){//用户尚未进行选择
+                [SFSpeechRecognizer requestAuthorization:^(SFSpeechRecognizerAuthorizationStatus status) {//请求授权
+                    if(speechState==SFSpeechRecognizerAuthorizationStatusAuthorized){//已授权语音识别
                         [self startRecording];
-                    } else {
-                        [MBProgressHUD showMessage:@"启动麦克风失败，请在设置中授予CNTraveler麦克风的权限" afterDelay:2.0 MBPMode:5 isWindiw:YES];
                     }
                 }];
+            }else{//如果用户没有授权语音识别（拒绝授权、设备不支持语音识别）
+                [MBProgressHUD showMessage:@"启动语音识别失败，请在设置中授予语音识别的权限" afterDelay:2.0 MBPMode:5 isWindiw:YES];
+                [self speechBtnStateWithSel:NO];
             }
+        }else if (authStatus == AVAuthorizationStatusDenied ||authStatus == AVAuthorizationStatusRestricted){//未授权(单纯的未授权、家长控制未授权)
+            [MBProgressHUD showMessage:@"启动麦克风失败，请在设置中授予麦克风的权限" afterDelay:2.0 MBPMode:5 isWindiw:YES];
+            [self speechBtnStateWithSel:NO];
         }
     }
-}
-- (NSInteger)checkMicrophoneStatus{
-    AVAuthorizationStatus authStatus = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-    switch (authStatus) {
-        case AVAuthorizationStatusNotDetermined://没有询问是否开启麦克风
-            return 1;
-            break;
-        case AVAuthorizationStatusRestricted://未授权，家长限制
-            return 2;
-            break;
-        case AVAuthorizationStatusDenied://玩家未授权
-            return 2;
-            break;
-        case AVAuthorizationStatusAuthorized://玩家授权
-            return 3;
-            break;
-        default:
-            break;
-    }
-    return 4;
 }
 - (void)startRecording{//启动语音引擎
     WS(ws);
@@ -201,6 +202,7 @@ static NSString *highText = @"松开开始搜索";
     //提出语音识别的请求，如果请求的shouldReportPartialResults属性是YES,将会返回处理结果，在语音输入时会不断处理，最后给出一个结果或者一个错误
     _recognitionTask = [_speechRecognizer recognitionTaskWithRequest:_recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         if (error) {
+            ws.isSpeechError = YES;
             NSLog(@"【biyu6调试信息】语音识别失败：%@",error);
         }else{
             //定义一个布尔值决定识别是否已经结束。
@@ -215,10 +217,10 @@ static NSString *highText = @"松开开始搜索";
             //
             isFinal = (result.isFinal);//是否是最终的处理结果
             if (isFinal) {//如果是最终结果--停止语音输入--在按钮松手后就会停止，所以这里就给注释掉了
-//                [_audioEngine stop];
-//                [_audioEngine.inputNode removeTapOnBus:0];
-//                _recognitionRequest = nil;
-//                _recognitionTask = nil;
+                //                [_audioEngine stop];
+                //                [_audioEngine.inputNode removeTapOnBus:0];
+                //                _recognitionRequest = nil;
+                //                _recognitionTask = nil;
             }
         }
     }];
@@ -277,3 +279,4 @@ static NSString *highText = @"松开开始搜索";
 
 
 @end
+
