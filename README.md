@@ -70,6 +70,6 @@
 }
 ```
 
-![image](https://github.com/biyu6/BYVoiceInput/blob/master/1.jpeg)
-![image](https://github.com/biyu6/BYVoiceInput/blob/master/2.jpeg)
-![image](https://github.com/biyu6/BYVoiceInput/blob/master/3.jpeg)
+![image](https://github.com/biyu6/BYVoiceInput/blob/master/1.png)
+![image](https://github.com/biyu6/BYVoiceInput/blob/master/2.png)
+![image](https://github.com/biyu6/BYVoiceInput/blob/master/3.png)
