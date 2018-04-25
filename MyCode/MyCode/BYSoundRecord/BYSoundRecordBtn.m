@@ -27,6 +27,8 @@ static NSString *highText = @"松开开始搜索";
 @property (nonatomic, copy)NSString *speechText;
 /**是否识别错误*/
 @property (nonatomic, assign)BOOL isSpeechError;
+/**是否取消了录音*/
+@property (nonatomic, assign)BOOL isCancel;
 
 @end
 @implementation BYSoundRecordBtn
@@ -71,6 +73,7 @@ static NSString *highText = @"松开开始搜索";
 #pragma mark- 用户交互
 - (void)audioStart{//开始录音
     NSLog(@"【biyu6调试信息】1=======开始录音========");
+    _isCancel = NO;//每次开始前，都给一个NO，这样只要不取消，就不会把内容置为空
     [self speechBtnStateWithSel:YES];
     _speechText = @"";
     if (self.clickSoundRecordStartBtn) {
@@ -97,6 +100,7 @@ static NSString *highText = @"松开开始搜索";
 }
 - (void)audioCancel{//取消录音
     NSLog(@"【biyu6调试信息】3=======取消录音========");
+    _isCancel = YES;//如果取消录音，离开把内容置为空
     [self speechBtnStateWithSel:NO];
     if (self.clickSoundRecordCancelBtn) {
         self.clickSoundRecordCancelBtn();
@@ -212,6 +216,9 @@ static NSString *highText = @"松开开始搜索";
             ws.speechText = [[resultStr componentsSeparatedByCharactersInSet:[[NSCharacterSet letterCharacterSet] invertedSet]] componentsJoinedByString:@""];
             NSLog(@"【biyu6调试信息】去除标点后的语音识别内容：%@",ws.speechText);
             if (self.clickSpeechRecognition) {//语音识别中的文字传送
+                if (ws.isCancel) {//如果当前是取消了，强制把内容置为空
+                    ws.speechText = @"";
+                }
                 self.clickSpeechRecognition(ws.speechText);
             }
             //
