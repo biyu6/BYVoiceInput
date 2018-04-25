@@ -476,7 +476,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = A582C95273;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SRCROOT)/MyCode/BYPrefix.h";
+				GCC_PREFIX_HEADER = "$(SRCROOT)/MyCode/BYSoundRecord/BYPrefix.h";
 				INFOPLIST_FILE = MyCode/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -495,7 +495,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = A582C95273;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "$(SRCROOT)/MyCode/BYPrefix.h";
+				GCC_PREFIX_HEADER = "$(SRCROOT)/MyCode/BYSoundRecord/BYPrefix.h";
 				INFOPLIST_FILE = MyCode/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
