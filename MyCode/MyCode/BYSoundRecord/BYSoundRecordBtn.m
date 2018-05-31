@@ -251,9 +251,8 @@ static NSString *highText = @"松开开始搜索";
         NSError *modeError;
         NSError *ActiveError;
         @try {
-            [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategorySoloAmbient error:&categoryError];//会停止其他程序的音频播放。当设备被设置为静音模式，app也同样被停止
-            //            [[AVAudioSession sharedInstance] setMode:AVAudioSessionCategoryPlayback error:&modeError];//只用于播放,默认会引起不支持混音的App中断，静音或锁屏时不静音
-            [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeMeasurement error:&modeError];//AV音频会话模式测量
+            [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&categoryError];//后台播放（iPad pro画中画）
+            [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeDefault error:&modeError];//恢复默认的
             [[AVAudioSession sharedInstance] setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&ActiveError];//激活自己通知其他背景音停用
         } @catch (NSException *exception) {
             NSLog(@"【biyu6调试信息】停止其他App音频播放错误 = %@",categoryError);
